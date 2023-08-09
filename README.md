@@ -23,7 +23,7 @@ You can see the availabel commands with `help` or `?`
 
 ## Contributors
 The contributors to this project are
-- Hassan Cissey ([https://github.com/hcissey0](@hcissey0))
+- Hassan Cissey ([@hcissey0](https://github.com/hcissey0))
 - Mustapha Ramadan ( )
 
 ## License
