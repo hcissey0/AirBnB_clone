@@ -15,7 +15,7 @@ This AirBnB Clone App allows users to search for and book accommodations.
 
 2. Install dependencies with `./requirements.txt`
 
-3. Start the app with `hbnb`
+3. Start the app with `./hbnb`
 
 ## Usage
 To use the app you can use the varous commands available to navigate through. You can view detailed information about available accommodations and book your stay.
