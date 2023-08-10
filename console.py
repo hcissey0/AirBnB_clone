@@ -4,13 +4,22 @@
 import cmd
 from models import storage
 from models.base_model import BaseModel
+from models.user import User
+from models.state import State
+from models.city import City
+from models.amenity import Amenity
+from models.place import Place
+from models.review import Review
 
 
 class HBNBCommand(cmd.Cmd):
     """This is the console class"""
 
     prompt = "(hbnb) "
-    models_list = ["BaseModel"]
+    models_list = ["BaseModel", "User",
+                   "State", "City",
+                   "Amenity", "Place",
+                   "Review"]
 
     def do_quit(self, line):
         """Quit command to exit the program\n"""
@@ -50,8 +59,9 @@ class HBNBCommand(cmd.Cmd):
             line = line.split()
             if line[0] in self.models_list:
                 if len(line) > 1:
-                    for v in storage.all().values():
-                        if line[1] == v.id:
+                    key = ".".join(line[0:2])
+                    for k, v in storage.all().items():
+                        if key == k:
                             print(v)
                             break
                     else:
@@ -77,11 +87,10 @@ class HBNBCommand(cmd.Cmd):
             line = line.split()
             if line[0] in self.models_list:
                 if len(line) > 1:
-                    for k, v in storage.all().items():
-                        if line[1] == v.id:
-                            storage.delete(v.id)
-                            storage.save()
-                            break
+                    key = ".".join(line[0:2])
+                    if key in storage.all().keys():
+                        storage.delete(key)
+                        storage.save()
                     else:
                         print("** no instance found **")
                 else:
@@ -120,9 +129,83 @@ class HBNBCommand(cmd.Cmd):
               "based or not on the class name.\nEx:",
               "$ all BaseModel or all\n")
 
+    def do_update(self, line):
+        """This is the update command parser"""
+        if line:
+            line = line.split()
+            if line[0] in self.models_list:
+                if len(line) > 1:
+                    key = ".".join(line[0:2])
+                    if key in storage.all().keys():
+                        if len(line) > 2:
+                            if len(line) > 3:
+                                list_string = []
+                                if line[3].startswith("\""):
+                                    for s in line[3:]:
+                                        list_string.append(s)
+                                        if s.endswith("\""):
+                                            break
+                                    val = " ".join(list_string)
+                                else:
+                                    val = line[3]
+                                storage.update(key,
+                                               str(line[2]),
+                                               eval(f"{val}"))
+                                storage.save()
+                            else:
+                                print("** value missing **")
+                        else:
+                            print("** attribute name missing **")
+                    else:
+                        print("** no instance found **")
+                else:
+                    print("** instance id missing **")
+            else:
+                print("** class doesn't exist **")
+        else:
+            print("** class name missing **")
+
+    def help_update(self):
+        """The update command help desk"""
+        print("Usage: update <class name> <id> <attribute name>",
+              "\"<attribute value>\"\n",
+              "Updates an instance based on the class name and id",
+              "by adding or updating attribute",
+              "(save changes to the JSON file).\nEx:",
+              "$ update BaseModel 1234-1234-1234 email \"airbnb@mail.com\"\n")
+
     def emptyline(self):
         """this is the empty line parser"""
         pass
+
+    def onecmd(self, line):
+        """overriding the internal onecmd function"""
+        args = line.split()
+        exts = ["all()", "count()"]
+        if len(args) > 0 and "." in args[0]:
+            cmds = args[0].split(".")
+            model = cmds[0]
+            ext = cmds[1] if len(cmds) > 1 else ""
+
+            if model in self.models_list:
+                if ext == "all()":
+                    self.do_all(model)
+                    return
+                elif ext == "count()":
+                    print(len([k for k in storage.all().keys()
+                               if k.startswith(model)]))
+                    return
+                elif ext.startswith("show(\"") and ext.endswith("\")"):
+                    id = ext[6:-2]
+                    fline = " ".join([model, id])
+                    self.do_show(fline)
+                    return
+                elif ext.startswith("destroy(\"") and ext.endswith("\")"):
+                    id = ext[9:-2]
+                    fline = " ".join([model, id])
+                    self.do_destroy(fline)
+                    return
+        return super(HBNBCommand, self).onecmd(line)
 
 
 if __name__ == '__main__':

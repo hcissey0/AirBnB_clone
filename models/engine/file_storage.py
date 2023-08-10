@@ -30,7 +30,7 @@ class FileStorage():
         with open(self.__file_path, "w") as file:
             json_dict = {}
             for k, v in self.__objects.items():
-                if v:
+                if v and k:
                     json_dict[k] = v.to_dict()
             json_string = json.JSONEncoder().encode(json_dict)
             file.write(json_string)
@@ -39,22 +39,33 @@ class FileStorage():
         """Reloads the json string form the file to __objects"""
         import json
         from ..base_model import BaseModel
+        from ..user import User
+        from ..state import State
+        from ..city import City
+        from ..amenity import Amenity
+        from ..place import Place
+        from ..review import Review
         if os.path.isfile(self.__file_path):
             with open(self.__file_path, "r") as file:
                 json_string = file.read()
                 if len(json_string) > 0:
                     json_dict = json.JSONDecoder().decode(json_string)
                     for k, v in json_dict.items():
-                        self.__objects[k] = BaseModel(**v)
+                        name = k.split(".")
+                        self.__objects[k] = eval("{}(**v)".format(name[0]))
 
-    def delete(self, id):
+    def delete(self, key):
         """deletes the object with the specified id"""
-        if id:
-            new_dict = {k: v for k, v in self.__objects.items()
-                        if v.id != id}
-            self.__objects = new_dict
+        if key:
+            for k in self.__objects.keys():
+                if k == key:
+                    del self.__objects[k]
+                    break
 
-    def update(self, id, **kwargs):
+    def update(self, key, attr, value):
         """The update function to update an object"""
-        if id:
-            pass
+        if key and attr and value:
+            for k in self.__objects.keys():
+                if key == k:
+                    self.__objects[k].__dict__[attr] = value
+                    break

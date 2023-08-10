@@ -21,13 +21,10 @@ class BaseModel():
                         self.__dict__[k] = datetime.fromisoformat(v)
                     else:
                         self.__dict__[k] = v
-        if "id" not in self.__dict__.keys():
+        else:
             self.id = str(uuid.uuid4())
-        if "created_at" not in self.__dict__.keys():
             self.created_at = datetime.now()
-        if "updated_at" not in self.__dict__.keys():
             self.updated_at = datetime.now()
-        if not kwargs:
             storage.new(self)
 
     def __str__(self):
