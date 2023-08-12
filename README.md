@@ -24,7 +24,7 @@ You can see the availabel commands with `help` or `?`
 ## Contributors
 The contributors to this project are
 - Hassan Cissey ([@hcissey0](https://github.com/hcissey0))
-- Mustapha Ramadan ( )
+- Mustapha Ramadan ([@MustaphaRam](https://github.com/MustaphaRam) )
 
 ## License
 This project is licensed under the MIT license
