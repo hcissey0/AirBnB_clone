@@ -16,20 +16,20 @@ class FileStorage():
 
     def all(self):
         """This is the function used to access the __objects"""
-        return self.__objects
+        return FileStorage.__objects
 
     def new(self, obj):
         """adds the obj in the __objects"""
         if obj:
             key = f"{obj.__class__.__name__}.{obj.id}"
-            self.__objects[key] = obj
+            FileStorage.__objects[key] = obj
 
     def save(self):
         """Serializes the __objects and save it to the file"""
         import json
-        with open(self.__file_path, "w", encoding="utf-8") as file:
+        with open(FileStorage.__file_path, "w", encoding="utf-8") as file:
             json_dict = {}
-            for k, v in self.__objects.items():
+            for k, v in FileStorage.__objects.items():
                 if v and k:
                     json_dict[k] = v.to_dict()
             json_string = json.JSONEncoder().encode(json_dict)
@@ -45,27 +45,27 @@ class FileStorage():
         from ..amenity import Amenity
         from ..place import Place
         from ..review import Review
-        if os.path.isfile(self.__file_path):
-            with open(self.__file_path, "r") as file:
+        if os.path.isfile(FileStorage.__file_path):
+            with open(FileStorage.__file_path, "r") as file:
                 json_string = file.read()
                 if len(json_string) > 0:
                     json_dict = json.JSONDecoder().decode(json_string)
                     for k, v in json_dict.items():
                         name = k.split(".")
-                        self.__objects[k] = eval("{}(**v)".format(name[0]))
+                        FileStorage.__objects[k] = eval("{}(**v)".format(name[0]))
 
     def delete(self, key):
         """deletes the object with the specified id"""
         if key:
-            for k in self.__objects.keys():
+            for k in FileStorage.__objects.keys():
                 if k == key:
-                    del self.__objects[k]
+                    del FileStorage.__objects[k]
                     break
 
     def update(self, key, attr, value):
         """The update function to update an object"""
         if key and attr and value:
-            for k in self.__objects.keys():
+            for k in FileStorage.__objects.keys():
                 if key == k:
-                    self.__objects[k].__dict__[attr] = value
+                    FileStorage.__objects[k].__dict__[attr] = value
                     break
