@@ -6,6 +6,7 @@ import os
 import sys
 import unittest
 
+
 class TestConsole(unittest.TestCase):
     """This is the unittest test case for the console"""
 
