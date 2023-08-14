@@ -10,6 +10,7 @@ from models.city import City
 from models.amenity import Amenity
 from models.place import Place
 from models.review import Review
+import re
 
 
 class HBNBCommand(cmd.Cmd):
@@ -131,39 +132,47 @@ class HBNBCommand(cmd.Cmd):
 
     def do_update(self, line):
         """This is the update command parser"""
-        if line:
-            line = line.split()
-            if line[0] in self.models_list:
-                if len(line) > 1:
-                    key = ".".join(line[0:2])
-                    if key in storage.all().keys():
-                        if len(line) > 2:
-                            if len(line) > 3:
-                                list_string = []
-                                if line[3].startswith("\""):
-                                    for s in line[3:]:
-                                        list_string.append(s)
-                                        if s.endswith("\""):
-                                            break
-                                    val = " ".join(list_string)
-                                else:
-                                    val = line[3]
-                                storage.update(key,
-                                               str(line[2]),
-                                               eval(f"{val}"))
-                                storage.save()
-                            else:
-                                print("** value missing **")
-                        else:
-                            print("** attribute name missing **")
-                    else:
-                        print("** no instance found **")
-                else:
-                    print("** instance id missing **")
-            else:
-                print("** class doesn't exist **")
-        else:
+        objs_dict = storage.all()
+        if not line:
             print("** class name missing **")
+            return
+        line = self.parse_line(line)
+        if line[0] not in self.models_list:
+            print("** class doesn't exist **")
+            return
+        if len(line) <= 1:
+            print("** instance id missing **")
+            return
+        key = ".".join(line[0:2])
+        if key not in objs_dict.keys():
+            print("** no instance found **")
+            return
+        if len(line) <= 2:
+            print("** attribute name missing **")
+            return
+        if len(line) <= 3:
+            try:
+                type(eval(line[2])) != dict
+            except NameError:
+                print("** value missing **")
+                return
+        val = None
+        list_string = []
+        if len(line) >= 4:
+            if line[3].startswith("\""):
+                for s in line[3:]:
+                    list_string.append(s)
+                    if s.endswith("\""):
+                        break
+                val = " ".join(list_string)
+            else:
+                val = line[3]
+            storage.update(key, line[2], eval(f"{val}"))
+            storage.save()
+        else:
+            for k, v in eval(line[2]).items():
+                storage.update(key, k, v)
+            storage.save()
 
     def help_update(self):
         """The update command help desk"""
@@ -180,32 +189,58 @@ class HBNBCommand(cmd.Cmd):
 
     def onecmd(self, line):
         """overriding the internal onecmd function"""
-        args = line.split()
-        exts = ["all()", "count()"]
-        if len(args) > 0 and "." in args[0]:
-            cmds = args[0].split(".")
-            model = cmds[0]
-            ext = cmds[1] if len(cmds) > 1 else ""
+        rex = re.match(r'^(.*)\.(.*)\((.*)\)$', line)
+        args = list(rex.groups()) if rex else None
+        if args and len(args) > 0:
+            model = args[0]
+            ext = args[1]
 
             if model in self.models_list:
-                if ext == "all()":
+                if ext == "all" and not args[2]:
                     self.do_all(model)
                     return
-                elif ext == "count()":
+                elif ext == "count" and not args[2]:
                     print(len([k for k in storage.all().keys()
                                if k.startswith(model)]))
                     return
-                elif ext.startswith("show(\"") and ext.endswith("\")"):
-                    id = ext[6:-2]
+                elif ext == "show" and args[2] \
+                        and args[2].startswith('"') and args[2].endswith('"'):
+                    id = args[2][1:-1]
                     fline = " ".join([model, id])
                     self.do_show(fline)
                     return
-                elif ext.startswith("destroy(\"") and ext.endswith("\")"):
-                    id = ext[9:-2]
+                elif ext == "destroy" and args[2]\
+                        and args[2].startswith('"') and args[2].endswith('"'):
+                    id = args[2][1:-1]
                     fline = " ".join([model, id])
                     self.do_destroy(fline)
                     return
+                elif ext == "update" and args[2]\
+                        and (ress := re.match(r"^(.*?), (\{.*\})$",
+                                              args[2])):
+                    res = ress.groups()
+                    print(res)
+                    id = res[0][1:-1]
+                    fline = "===".join([model, id, res[1]])
+                    self.do_update(fline)
+                    return
+                elif ext == "update" and args[2]\
+                        and (ress := re.match(r'^(.*?), (.*), (.*?)$',
+                                             args[2])):
+                    res = ress.groups()
+                    print("update1")
+                    print(res)
+                    fline = " ".join([model, res[0][1:-1],
+                                      res[1][1:-1], res[2]])
+                    self.do_update(fline)
+                    return
         return super(HBNBCommand, self).onecmd(line)
+
+    def parse_line(self, line):
+        if (res := re.match(r"^(.*?)===(.*)===(.*)$", line)):
+            return list(res.groups())
+        else:
+            return line.split()
 
 
 if __name__ == '__main__':

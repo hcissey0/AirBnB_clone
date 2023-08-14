@@ -3,7 +3,12 @@
 
 import unittest
 from models.base_model import BaseModel
+from models.engine.file_storage import FileStorage
 from datetime import datetime
+import re
+import json
+import os
+import uuid
 
 
 class TestBaseModel_Instantiation(unittest.TestCase):
@@ -13,13 +18,26 @@ class TestBaseModel_Instantiation(unittest.TestCase):
         mod = BaseModel()
         self.assertIsInstance(mod, BaseModel)
 
+    def test_two_objs(self):
+        bm1 = BaseModel()
+
+        bm2 = BaseModel(**bm1.to_dict())
+        self.assertDictEqual(bm1.to_dict(), bm2.to_dict())
+
     def test_with_one_args(self):
         bm = BaseModel(23)
+        self.assertEqual(str(type(bm)),
+                         "<class 'models.base_model.BaseModel'>")
+        self.assertTrue(issubclass(type(bm), BaseModel))
         self.assertIsInstance(bm, BaseModel)
 
     def test_with_two_args(self):
         bm = BaseModel(23, "hllo")
         self.assertIsInstance(bm, BaseModel)
+
+    def test_many_args(self):
+        arguments = [i for i in range(2000)]
+        bm = BaseModel(*arguments)
 
     def test_with_one_kwargs(self):
         bm = BaseModel(id="hello")
@@ -49,6 +67,9 @@ class TestBaseModel_Instantiation(unittest.TestCase):
         bm1 = BaseModel()
         bm2 = BaseModel()
         self.assertNotEqual(bm1.id, bm2.id)
+
+        lis = [BaseModel().id for i in range(2000)]
+        self.assertEqual(len(lis), len(set(lis)))
 
     def test_id_list(self):
         bm = BaseModel(id=[])
@@ -280,20 +301,48 @@ class TestBaseModel_Save(unittest.TestCase):
     def setUp(self):
         self.bm = BaseModel()
 
+    def clear_storage(self):
+        FileStorage._FileStorage__objects = {}
+        if os.path.isfile(FileStorage._FileStorage__file_path):
+            os.remove(FileStorage._FileStorage__file_path)
+
+    def tearDown(self):
+        self.clear_storage()
+
     def test_no_args(self):
         self.bm.save()
+        with self.assertRaises(TypeError):
+            BaseModel.save()
 
     def test_one_arg(self):
         with self.assertRaises(TypeError):
             self.bm.save(34)
 
     def test_updated_time(self):
-        prev_time = self.bm.updated_at
         self.bm.save()
+        prev_time = datetime.now()
         new_time = self.bm.updated_at
+        self.bm.save()
+        diff = self.bm.updated_at - datetime.now()
         self.assertTrue(all(isinstance(k, datetime)
                             for k in [prev_time, new_time]))
         self.assertNotEqual(prev_time, new_time)
+
+        self.assertTrue(abs(diff.total_seconds()) < 0.1)
+
+    def test_file_storage(self):
+        self.clear_storage()
+        bm = BaseModel()
+        dictrep = {f"{type(bm).__name__}.{bm.id}":
+                   bm.to_dict()}
+        bm.save()
+        self.assertTrue(os.path.isfile(FileStorage._FileStorage__file_path))
+        with open(FileStorage._FileStorage__file_path) as file:
+            self.assertEqual(len(json.JSONEncoder().encode(dictrep)),
+                             len(file.read()))
+            file.seek(0)
+            self.assertEqual(len(json.JSONDecoder().decode(file.read())),
+                             len(dictrep))
 
 
 class TestBaseModel_ToDict(unittest.TestCase):
@@ -318,12 +367,59 @@ class TestBaseModel_ToDict(unittest.TestCase):
         with self.assertRaises(TypeError):
             BaseModel().to_dict(78)
 
+    def test_dict(self):
+        bm = BaseModel()
+        bm.first_name = "hello"
+        dictrep = bm.to_dict()
+
+        self.assertEqual(dictrep["id"], bm.id)
+        self.assertEqual(dictrep["first_name"], bm.first_name)
+        self.assertEqual(dictrep["created_at"], bm.created_at.isoformat())
+        self.assertEqual(dictrep["updated_at"], bm.updated_at.isoformat())
+        self.assertEqual(dictrep["__class__"], type(bm).__name__)
+
+    def test_n_args(self):
+        with self.assertRaises(TypeError):
+            BaseModel.to_dict()
+
+    def test_create(self):
+        dic = {"id": uuid.uuid4,
+               "__class__": "BaseModel",
+               "updated_at": datetime.now().isoformat(),
+               "created_at": datetime.now().isoformat(),
+               "name": "kofi",
+               "age": 56}
+        bm = BaseModel(**dic)
+        self.assertDictEqual(dic, bm.to_dict())
+
 
 class TestBaseModel_Str(unittest.TestCase):
     """This is the test case for the __str__ method"""
 
     def test_len(self):
-        pass
+        bm = BaseModel()
+        self.assertTrue(len(str(bm)) > 1)
+
+    def test_attrs(self):
+        import datetime
+        bm = BaseModel()
+        bm.first_name = "hello"
+        strrep = str(bm)
+        regex = re.compile(r"^\[(.*)\] \((.*)\) (.*)$")
+        res = regex.match(strrep)
+        self.assertIsNotNone(res)
+        self.assertEqual(res.group(1), "BaseModel")
+        self.assertEqual(res.group(2), bm.id)
+        dictrep = dict(eval(str(res.group(3))))
+        bmdict = bm.to_dict()
+
+        self.assertEqual(dictrep["created_at"].isoformat(),
+                         bmdict["created_at"])
+        self.assertEqual(dictrep["updated_at"].isoformat(),
+                         bmdict["updated_at"])
+        self.assertEqual(dictrep["first_name"],
+                         bmdict["first_name"])
+        self.assertEqual(dictrep["id"], bmdict["id"])
 
 
 if __name__ == "__main__":
