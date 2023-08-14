@@ -52,7 +52,8 @@ class FileStorage():
                     json_dict = json.JSONDecoder().decode(json_string)
                     for k, v in json_dict.items():
                         name = k.split(".")
-                        FileStorage.__objects[k] = eval("{}(**v)".format(name[0]))
+                        FileStorage.__objects[k] = eval(
+                                "{}(**v)".format(name[0]))
 
     def delete(self, key):
         """deletes the object with the specified id"""
