@@ -27,7 +27,7 @@ class FileStorage():
     def save(self):
         """Serializes the __objects and save it to the file"""
         import json
-        with open(self.__file_path, "w") as file:
+        with open(self.__file_path, "w", encoding="utf-8") as file:
             json_dict = {}
             for k, v in self.__objects.items():
                 if v and k:
