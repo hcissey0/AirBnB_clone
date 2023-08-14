@@ -226,7 +226,7 @@ class HBNBCommand(cmd.Cmd):
                     return
                 elif ext == "update" and args[2]\
                         and (ress := re.match(r'^(.*?), (.*), (.*?)$',
-                                             args[2])):
+                                              args[2])):
                     res = ress.groups()
                     print("update1")
                     print(res)
